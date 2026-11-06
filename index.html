@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Slam Climb</title>
+  <script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>
+  <style>
+    /* Only shades of purple, green and yellow (D24, D27). No gradients, no white, no blurred shadows. */
+    :root {
+      --p950: #1A0B33; --p900: #24124A; --p800: #2F185E; --p700: #3B1E6E; --p600: #4D2A8C; --p500: #6240AD; --p400: #7D5CC6; --p300: #9C82D8; --p200: #BFAEE8;
+      --g900: #18522A; --g800: #22703A; --g700: #2E9247; --g500: #4FC25B; --g400: #73D46F; --g300: #9AE38D; --g200: #C2EEB3;
+      --y800: #A26F00; --y700: #C98A00; --y500: #FFD23F; --y400: #FFDD6B; --y300: #FFE796; --y200: #FFF0BF;
+    }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--p700); color: var(--p200); }
+    body {
+      touch-action: none; user-select: none; -webkit-user-select: none;
+      -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #game { position: fixed; inset: 0; }
+    #game canvas { display: block; width: 100%; height: 100%; }
+    svg.ico { width: 1.05em; height: 1.05em; vertical-align: -.15em; fill: currentColor; }
+
+    /* ---------- loading ---------- */
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--p700); z-index: 50; transition: transform .25s;
+    }
+    #loading.gone { transform: translateY(-100%); }
+    #loading .blob {
+      width: 72px; height: 72px; border-radius: 50%; background: var(--y500); position: relative;
+      box-shadow: inset -8px -10px 0 var(--y700);
+      animation: hop .55s cubic-bezier(.3,.7,.4,1) infinite alternate;
+    }
+    #loading .blob::before, #loading .blob::after {
+      content: ""; position: absolute; top: 24px; width: 12px; height: 16px; border-radius: 50%; background: var(--p950);
+    }
+    #loading .blob::before { left: 20px; } #loading .blob::after { right: 20px; }
+    @keyframes hop { from { transform: translateY(0) scale(1.15, .85); } to { transform: translateY(-46px) scale(.9, 1.1); } }
+    #loading .bar { margin-top: 36px; width: 180px; height: 10px; border-radius: 6px; background: var(--p900); overflow: hidden; }
+    #loading .fill { height: 100%; width: 0; background: var(--g500); transition: width .15s; }
+
+    /* ---------- overlays ---------- */
+    #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+    .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+    .panel {
+      background: var(--p800); color: var(--p200); border: 4px solid var(--p500); border-radius: 28px; padding: 22px 22px 20px; width: min(86vw, 380px);
+      box-shadow: 0 10px 0 var(--p950);
+      text-align: center; transform: scale(0); transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .overlay.show .panel { transform: scale(1); }
+    .panel h1 { margin: 2px 0 10px; font-size: 34px; font-weight: 900; letter-spacing: .5px; color: var(--y400); }
+    .progress { margin: 8px 0 16px; }
+    .progress .label { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--p300); }
+    .progress .track { height: 16px; border-radius: 10px; background: var(--p950); overflow: hidden; }
+    .progress .fill { height: 100%; width: 0; border-radius: 10px; background: var(--g500); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+    .row { display: flex; gap: 10px; justify-content: center; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    button.btn {
+      font: inherit; font-weight: 900; font-size: 22px; border: 0; border-radius: 18px; padding: 14px 16px; min-height: 56px;
+      color: var(--p200); background: var(--p600); box-shadow: 0 6px 0 var(--p900); cursor: pointer;
+      transition: transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .08s; flex: 1;
+    }
+    button.btn:hover { transform: scale(1.03); }
+    button.btn:active { transform: scale(.92) translateY(4px); box-shadow: 0 2px 0 var(--p900); transition-duration: .06s; }
+    button.btn.big { background: var(--g500); color: var(--g900); box-shadow: 0 6px 0 var(--g800); font-size: 26px; }
+    button.btn.big:active { box-shadow: 0 2px 0 var(--g800); }
+    /* rewarded: yellow, never green (Poki rule) */
+    button.btn.ad { background: var(--y500); color: var(--p900); box-shadow: 0 6px 0 var(--y800); font-size: 18px; }
+    button.btn.ad:active { box-shadow: 0 2px 0 var(--y800); }
+    button.btn.ghost { background: var(--p700); color: var(--p200); box-shadow: 0 6px 0 var(--p950); font-size: 18px; }
+    button.btn.ghost:active { box-shadow: 0 2px 0 var(--p950); }
+    button.btn:disabled { pointer-events: none; background: var(--p700); color: var(--p500); box-shadow: 0 6px 0 var(--p900); }
+    .breathe { animation: breathe 1.6s ease-in-out infinite; }
+    @keyframes breathe { 50% { transform: scale(1.04); } }
+
+    /* level select */
+    .levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 6px 0 14px; max-height: min(52vh, 420px);
+      overflow-y: auto; touch-action: pan-y; padding: 4px 4px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .lv { font: inherit; border: 0; border-radius: 16px; background: var(--p600); color: var(--p200); padding: 8px 2px 6px; cursor: pointer;
+      box-shadow: 0 4px 0 var(--p900); display: flex; flex-direction: column; align-items: center; gap: 2px;
+      transition: transform .15s cubic-bezier(.34,1.56,.64,1); }
+    .lv:active { transform: scale(.9) translateY(3px); box-shadow: 0 1px 0 var(--p900); }
+    .lv .num { font-size: 22px; font-weight: 900; }
+    .lv .ls { font-size: 12px; letter-spacing: 1px; color: var(--p800); }
+    .lv .ls i { font-style: normal; } .lv .ls i.on { color: var(--y500); }
+    .lv.cur { background: var(--g500); color: var(--g900); box-shadow: 0 4px 0 var(--g800); }
+    .lv.cur .ls { color: var(--g700); }
+
+    /* star bar (results only): slams left */
+    .cdot, .sdot { display: inline-block; width: .8em; height: .8em; border-radius: 50%; vertical-align: -.08em; box-sizing: border-box; }
+    .cdot { background: var(--y500); box-shadow: inset -2px -3px 0 var(--y700); }
+    .sdot { background: var(--y500); box-shadow: inset -2px -3px 0 var(--y700); margin: 0 1px; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+    .sdot.spent { background: var(--p950); box-shadow: none; transform: scale(.8); }
+    .scorebar { margin: 6px 4px 14px; }
+    .sb-stars { position: relative; height: 46px; margin: 0 14px; }
+    .sb-stars .s { position: absolute; top: 0; transform: translateX(-50%) scale(.8); font-size: 40px; line-height: 1; color: var(--p600);
+      transition: transform .3s cubic-bezier(.34,1.8,.64,1); }
+    .sb-stars .s.on { color: var(--y500); text-shadow: 0 3px 0 var(--y800); }
+    .sb-stars .s.pop { transform: translateX(-50%) scale(1.15); }
+    .sb-stars .s:first-child { transform: translateX(-10%) scale(.9); }
+    .sb-track { position: relative; height: 20px; margin: 0 14px; border-radius: 10px; background: var(--p950); }
+    .sb-fill { height: 100%; width: 0; border-radius: 10px; background: var(--g500); transition: width .18s ease-out; }
+    .sb-track .notch { position: absolute; top: -5px; width: 4px; height: 30px; margin-left: -2px; border-radius: 2px; background: var(--y400); }
+    .sb-line { display: flex; justify-content: space-between; align-items: center; margin: 10px 14px 0; font-weight: 800; font-size: 18px; color: var(--p300); }
+    .sb-line b { color: var(--y300); font-size: 22px; }
+    .sb-line .full { color: var(--y400); animation: breathe 1.2s ease-in-out infinite; }
+
+    /* styles grid */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 14px; }
+    .tile {
+      background: var(--p600); border-radius: 16px; padding: 10px 4px 8px; cursor: pointer; border: 3px solid var(--p600);
+      box-shadow: 0 4px 0 var(--p900); transition: transform .15s cubic-bezier(.34,1.56,.64,1);
+    }
+    .tile:active { transform: scale(.92); }
+    .tile.eq { border-color: var(--g400); }
+    .tile .dot { width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 6px; box-sizing: border-box; box-shadow: inset -5px -6px 0 var(--y700); }
+    .tile.locked .dot { background: var(--p800) !important; box-shadow: none; }
+    .tile .nm { font-size: 13px; font-weight: 800; color: var(--p200); }
+    .tile .pr { font-size: 12px; font-weight: 800; color: var(--y400); }
+    .toggles { display: flex; gap: 10px; justify-content: center; margin: 10px 0 14px; }
+    .toggles button { font-size: 16px; }
+    #skip {
+      position: absolute; right: 14px; bottom: 18px; pointer-events: auto; display: none; font-size: 16px; min-height: 48px; padding: 10px 14px;
+    }
+  </style>
+  <script type="module" crossorigin src="./assets/index-CaLBl_SL.js"></script>
+</head>
+<body>
+  <div id="game"><canvas id="c"></canvas></div>
+  <div id="ui"><button id="skip" class="btn ad">Skip level</button></div>
+  <div id="loading"><div class="blob"></div><div class="bar"><div class="fill" id="loadfill"></div></div></div>
+</body>
+</html>
