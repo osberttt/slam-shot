@@ -49,7 +49,8 @@
       box-shadow: 0 10px 0 var(--p950);
       text-align: center; transform: scale(0); transition: transform .25s cubic-bezier(.34,1.56,.64,1);
     }
-    .overlay.show .panel { transform: scale(1); }
+    .overlay.show .panel { transform: scale(var(--fit, 1)); }
+    button:focus-visible { outline: 4px solid var(--y400); outline-offset: 2px; }
     .panel h1 { margin: 2px 0 10px; font-size: 34px; font-weight: 900; letter-spacing: .5px; color: var(--y400); }
     .progress { margin: 8px 0 16px; }
     .progress .label { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--p300); }
@@ -125,7 +126,7 @@
       position: absolute; right: 14px; bottom: 18px; pointer-events: auto; display: none; font-size: 16px; min-height: 48px; padding: 10px 14px;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-CaLBl_SL.js"></script>
+  <script type="module" crossorigin src="./assets/index-DI-Res5t.js"></script>
 </head>
 <body>
   <div id="game"><canvas id="c"></canvas></div>
