@@ -116,8 +116,8 @@
     }
     .tile:active { transform: scale(.92); }
     .tile.eq { border-color: var(--g400); }
-    .tile .dot { width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 6px; box-sizing: border-box; box-shadow: inset -5px -6px 0 var(--y700); }
-    .tile.locked .dot { background: var(--p800) !important; box-shadow: none; }
+    .tile { font: inherit; color: inherit; width: 100%; }
+    .tile .ball { display: block; width: 48px; height: 48px; margin: 0 auto 6px; }
     .tile .nm { font-size: 13px; font-weight: 800; color: var(--p200); }
     .tile .pr { font-size: 12px; font-weight: 800; color: var(--y400); }
     .toggles { display: flex; gap: 10px; justify-content: center; margin: 10px 0 14px; }
@@ -126,7 +126,7 @@
       position: absolute; right: 14px; bottom: 18px; pointer-events: auto; display: none; font-size: 16px; min-height: 48px; padding: 10px 14px;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-ChrHYj2c.js"></script>
+  <script type="module" crossorigin src="./assets/index--rodJW7V.js"></script>
 </head>
 <body>
   <div id="game"><canvas id="c"></canvas></div>
